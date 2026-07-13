@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Herzenskunst – Hero-Karussell</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;overflow-x:hidden;background:#f5f0eb}
+.hero{width:100%;display:flex;align-items:center;justify-content:center;padding:28px 16px;background:linear-gradient(155deg,#e8f0ee 0%,#f5f0eb 40%,#f0ece8 100%);position:relative;overflow:hidden;min-height:300px}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 40%,rgba(13,109,110,0.06) 0%,transparent 60%),radial-gradient(ellipse at 80% 50%,rgba(180,120,80,0.05) 0%,transparent 60%);pointer-events:none}
+.hero::after{content:'';position:absolute;inset:-40px;background:repeating-linear-gradient(-3deg,transparent,transparent 40px,rgba(13,109,110,0.02) 40px,rgba(13,109,110,0.02) 41px);pointer-events:none}
+.carousel{position:relative;width:100%;max-width:780px;height:170px;margin:0 20px;transform:rotate(-2.5deg)}
+.item{position:absolute;top:50%;left:0;border-radius:10px;cursor:pointer;overflow:hidden;transition:transform .6s cubic-bezier(.25,.1,.25,1),opacity .6s ease;will-change:transform,opacity;transform:translateY(-50%) scale(.85);opacity:0;width:160px;height:160px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.item img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .4s ease}
+.item:hover img{transform:scale(1.06)}
+.item .overlay{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.55) 0%,transparent 50%,rgba(0,0,0,.1) 100%);pointer-events:none}
+.item .title{position:absolute;bottom:0;left:0;right:0;z-index:1;color:#fff;font-size:.75rem;font-weight:600;text-shadow:0 2px 12px rgba(0,0,0,.5);text-align:center;padding:24px 8px 10px;letter-spacing:.02em}
+.item.exiting{animation:exit .4s ease-out forwards;pointer-events:none}
+@keyframes exit{to{filter:blur(8px);opacity:0;transform:translateY(-50%) scale(1.15)!important}}
+@keyframes float{0%,100%{transform:translateY(0px)}50%{transform:translateY(-5px)}}
+.float{animation:float 4s ease-in-out infinite}
+.item:nth-child(1) .float{animation-delay:0s}
+.item:nth-child(2) .float{animation-delay:.5s}
+.item:nth-child(3) .float{animation-delay:1s}
+.item:nth-child(4) .float{animation-delay:1.5s}
+.item:nth-child(5) .float{animation-delay:2s}
+.item:nth-child(6) .float{animation-delay:2.5s}
+.arrow{position:absolute;top:50%;z-index:20;width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,.85);color:#1a5c5e;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .25s;box-shadow:0 2px 12px rgba(0,0,0,.1);transform:translateY(-50%) rotate(2.5deg)}
+.arrow:hover{background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.15);color:#0d4a4b}
+.arrow.prev{left:-12px}
+.arrow.next{right:-12px}
+.dots{display:flex;justify-content:center;gap:8px;position:absolute;bottom:-28px;left:50%;transform:translateX(-50%) rotate(2.5deg)}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(13,109,110,.2);cursor:pointer;transition:all .3s}
+.dot.active{background:#0d6d6e;box-shadow:0 0 8px rgba(13,109,110,.4);width:24px;border-radius:4px}
+@media(max-width:767px){
+.hero{padding:20px 12px}
+.carousel{height:140px;margin:0 12px}
+.item{width:110px;height:130px;border-radius:8px}
+.item .title{font-size:.65rem;padding:18px 6px 8px}
+.arrow{width:22px;height:22px;font-size:11px;transform:translateY(-50%) rotate(2.5deg)}
+.arrow.prev{left:-2px}
+.arrow.next{right:-2px}
+.dots{transform:translateX(-50%) rotate(2.5deg)}
+}
+@media(prefers-reduced-motion:reduce){
+*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+.float{animation:none!important}
+.item:hover img{transform:none}
+}
+</style>
+</head>
+<body>
+<section class="hero">
+  <div class="carousel" id="carousel">
+    <button class="arrow prev" id="prevBtn" aria-label="Vorheriges">‹</button>
+    <div id="track"></div>
+    <button class="arrow next" id="nextBtn" aria-label="Nächstes">›</button>
+    <div class="dots" id="dots"></div>
+  </div>
+</section>
+<script>
+const items = [
+  { img: 'images/001.webp', title: 'Sanfte Wogen' },
+  { img: 'images/004.webp', title: 'Goldene Ader' },
+  { img: 'images/006.webp', title: 'Farben der Tiefe' },
+  { img: 'images/008.webp', title: 'Kristallblüte' },
+  { img: 'images/010.webp', title: 'Feuer & Wasser' },
+  { img: 'images/012.webp', title: 'Mond über Meer' }
+];
+
+const track = document.getElementById('track');
+const dots = document.getElementById('dots');
+let current = 0, total = items.length;
+let exiting = false;
+let autoplay;
+
+items.forEach((d,i)=>{
+  const el = document.createElement('div');
+  el.className = 'item';
+  el.innerHTML = `<img src="${d.img}" alt="${d.title}" loading="lazy" decoding="async"><div class="overlay"></div><div class="title float">${d.title}</div>`;
+  el.addEventListener('click',()=>{ if(!exiting){ startAutoplay(); advance(i) } });
+  track.appendChild(el);
+  const dot = document.createElement('div');
+  dot.className = 'dot';
+  dot.addEventListener('click',()=>{ if(!exiting){ startAutoplay(); goTo(i) } });
+  dots.appendChild(dot);
+});
+
+function pos(){
+  const isM = window.innerWidth < 768;
+  const cw = track.parentElement.clientWidth;
+  const w = isM ? Math.min(110, cw-24) : 160, gap = isM ? 12 : 20;
+  const base = (cw - w) / 2;
+  const cards = track.children;
+  for(let i=0;i<total;i++){
+    const el = cards[i];
+    let o = i - current;
+    if(o > 3) o -= total;
+    if(o < -3) o += total;
+    const abs = Math.abs(o);
+    if(abs > 2 || (isM && abs > 0)){
+      el.style.opacity = '0'; el.style.pointerEvents = 'none';
+      el.style.transform = `translateY(-50%) translateX(${base+o*(w+gap)}px) scale(0.4)`;
+      continue;
+    }
+    const scale = 1 - abs * 0.18;
+    const opacity = Math.max(0.25, 1 - abs * 0.35);
+    const z = 10 - abs;
+    const x = base + o * (w + gap);
+    el.style.opacity = opacity;
+    el.style.pointerEvents = 'auto';
+    el.style.zIndex = z;
+    el.style.transform = `translateY(-50%) translateX(${x}px) scale(${scale})`;
+  }
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===current));
+}
+
+function goTo(i){
+  if(i===current) return;
+  current = (i+total)%total;
+  pos();
+}
+
+function advance(from){
+  exiting = true;
+  const el = track.children[from];
+  el.classList.add('exiting');
+  const next = (from+1) % total;
+  setTimeout(()=>{
+    el.classList.remove('exiting');
+    current = next;
+    pos();
+    exiting = false;
+  }, 400);
+}
+
+function startAutoplay(){
+  clearInterval(autoplay);
+  autoplay = setInterval(()=>{ if(!exiting) goTo(current+1) }, 3000);
+}
+
+document.getElementById('prevBtn').addEventListener('click',()=>{ if(!exiting){ startAutoplay(); goTo(current-1) } });
+document.getElementById('nextBtn').addEventListener('click',()=>{ if(!exiting){ startAutoplay(); goTo(current+1) } });
+
+if('IntersectionObserver' in window){
+  const obs = new IntersectionObserver(e=>e.forEach(e=>{if(e.isIntersecting)requestAnimationFrame(pos)}),{threshold:.1});
+  obs.observe(track);
+}
+
+requestAnimationFrame(pos);
+startAutoplay();
+window.addEventListener('resize',pos);
+</script>
+</body>
+</html>
